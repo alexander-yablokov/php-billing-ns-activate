@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<!--.
+@ /netup/utm5/bin/utm5_urfaclient  -x /netup/utm5/scripts/ns_tariff_change -a activate_flexible_dp -datafile ./activate.dat
+@ Made by alex
+-->
+<urfa>
+<for name="i" from="0" count="size(user_id_array)">
+    <set src="user_id_array" src_index="i" dst="user_id"/>
+    <set src="account_id_array" src_index="i" dst="account_id"/>
+    <set src="tariff_link_id_array" src_index="i" dst="tariff_link_id"/>
+    <set src="tariff_current_array" src_index="i" dst="tariff_current"/>
+    <set src="discount_period_id_array" src_index="i" dst="new_discount_period_id"/>
+
+    <call function="rpcf_get_all_services_for_user" />
+    <for name="j" from="0" count="slink_id_count">
+        <set src="tariff_name_array" src_index="j" dst="tariff_name"/>
+        <if variable="tariff_name" value="Недостаточно средств [0][1]" condition="eq">
+            <set src="slink_id_array" src_index="j" dst="slink_id"/>
+            <set src="service_type_array" src_index="j" dst="service_type"/>
+            <if variable="service_type" value="3" condition="eq">
+                <call function="rpcf_get_iptraffic_service_link_ipv6"/>
+		<for name="j" from="0" count="ip_groups_count">
+                    <set value="0" dst_index="j" dst="router_id"/>
+    		    <set src="ip_address" src_index="j" dst="ip" dst_index="j"/>
+    		    <set src="iptraffic_allowed_cid" src_index="j" dst="allowed_cid" dst_index="j"/>
+    		    <set dst="is_skip_radius" dst_index="j" value="1"/>
+    		    <set src="dont_use_fw" src_index="j" dst="is_skip_rfw" dst_index="j"/>
+		</for>
+		<for name="q" from="0" count="quotas_count">
+    		    <set src="tclass_id" src_index="q" dst="tc_id" dst_index="q"/>
+		</for>
+		<break />
+	    </if>
+        </if>
+    </for>
+    <call function="rpcf_unlink_user_tariff"/>
+    <set src="new_discount_period_id" dst="discount_period_id"/>
+    <remove name="tariff_link_id" />
+    <set dst="change_now" value="1"/>
+    <call function="rpcf_link_user_tariff"/>
+    <set src="tariff_link_id" dst="tplink_id"/>
+    <set src="tariff_current" dst="tariff_id"/>
+
+    <call function="rpcf_get_tariff_new"/>
+
+    <for name="x" from="0" count="services_count">
+        <set src="link_by_default_array" src_index="x" dst="link_by_default"/>
+        <if variable="link_by_default" value="1" condition="eq">
+            <set src="service_id_array" src_index="x" dst="service_id"/>
+            <set src="service_type_array" src_index="x" dst="service_type"/>
+<!--            <set dst="return_type" value=""/> -->
+	    <if variable="service_type" value="3" condition="eq">
+	       <set dst="cost_coef" value="1"/>
+	       <for name="y" from="0" count="ip_groups_count">
+		    <set src="iptraffic_login" src_index="j" dst="login" dst_index="y"/>
+		    <set src="iptraffic_password" src_index="j" dst="password" dst_index="y"/>
+		</for>
+	        <call function="rpcf_add_iptraffic_service_link_ipv6"/>
+	    </if>
+        </if>
+    </for>
+
+</for>
+</urfa>
+
